@@ -84,7 +84,7 @@ if __name__ == "__main__":
     try:
         # Convert input strings to datetime objects
         start_date = datetime.strptime(start_date_str, "%Y-%m-%d")
-        end_date = datetime.strptime(end_date_str, "%Y-%m-%d")
+        end_date = datetime.strptime(end_date_str, "%Y-%m-%d") + timedelta(days=7)
     except ValueError:
         print("Error: Invalid date format. Use YYYY-MM-DD.")
         exit()
