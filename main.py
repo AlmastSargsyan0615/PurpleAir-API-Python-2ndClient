@@ -1,9 +1,8 @@
 import requests
 import json
 import csv
-import os
 from datetime import datetime, timedelta
-import pandas as pd
+import os
 
 def load_config():
     try:
@@ -49,19 +48,23 @@ def get_sensor_history(api_key, sensor_index, start_timestamp, end_timestamp, av
 def format_timestamp(timestamp):
     return datetime.utcfromtimestamp(timestamp).strftime('%Y-%m-%d')
 
-def save_to_excel(sensor_index, start_date, end_date, data):
+def save_to_csv(sensor_index, start_date, end_date, data):
     folder_name = f"{start_date}_{end_date}"
     os.makedirs(folder_name, exist_ok=True)
 
     if not data:
-        excel_filename = f"empty_{sensor_index}.xlsx"
+        csv_filename = f"empty_{sensor_index}.csv"
     else:
-        excel_filename = f"{sensor_index}.xlsx"
+        csv_filename = f"{sensor_index}.csv"
 
-    excel_path = os.path.join(folder_name, excel_filename)
-    df = pd.DataFrame(data, columns=['Date'] + [f'{field}' for field in data[0][1]])
-    df.to_excel(excel_path, index=False)
-    print(f"Data saved to Excel file: {excel_path}")
+    csv_path = os.path.join(folder_name, csv_filename)
+    with open(csv_path, mode='w', newline='') as csv_file:
+        csv_writer = csv.writer(csv_file)
+        csv_writer.writerow(['Date', 'PM2.5_1week'])
+        for data_point in data:
+            timestamp, pm25_value = data_point
+            formatted_date = format_timestamp(timestamp)
+            csv_writer.writerow([formatted_date, pm25_value])
 
 if __name__ == "__main__":
     # Load API key from config.json
@@ -92,7 +95,7 @@ if __name__ == "__main__":
 
     # Set the desired average (in minutes) and fields
     average_minutes = 10080  # 1 week
-    fields = "latitude,longitude,temperature,humidity,pm2.5_atm"
+    fields = "pm2.5_alt"
 
     # Iterate over each sensor index and get sensor history
     for sensor_index in sensor_indices:
@@ -100,19 +103,12 @@ if __name__ == "__main__":
         if result:
             print(f"Sensor {sensor_index} History:")
             sorted_data = sorted(result['data'], key=lambda x: x[0])  # Sort by timestamp
-
-            # Extract the fields from the first data point
-            field_names = ['Date'] + [field for timestamp, values in sorted_data for field in values.keys()]
-            data = [[''] * len(field_names) for _ in range(len(sorted_data))]
-
-            # Populate the data matrix
-            for i, (timestamp, values) in enumerate(sorted_data):
+            for data_point in sorted_data:
+                timestamp, pm25_value = data_point
                 formatted_date = format_timestamp(timestamp)
-                data[i][0] = formatted_date
-                for j, field in enumerate(values.keys(), start=1):
-                    data[i][j] = values[field]
+                print(f"Date: {formatted_date}, PM2.5_1week: {pm25_value}")
 
-            save_to_excel(sensor_index, start_date_str, end_date_str, data)
-            print("\n")
+            save_to_csv(sensor_index, start_date_str, end_date_str, sorted_data)
+            print(f"Data saved to CSV file.\n")
         else:
             print(f"No data available for Sensor {sensor_index}.\n")
